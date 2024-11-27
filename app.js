@@ -13,7 +13,9 @@ var app = express();
 const cors = require("cors");
 app.use(
   cors({
-    origin: ["http://localhost:3001"],
+    origin: [
+      "https://tech-news-frontend-12f3wt81f-cristinavrs-projects.vercel.app",
+    ],
     credentials: true,
     exposedHeaders: ["set-cookie"],
   })
