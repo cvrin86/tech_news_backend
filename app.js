@@ -40,11 +40,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 
-app.use(cors({
-  origin:"http://localhost:3001", // ton frontend
-  credentials: true,               // pour envoyer les cookies
-  exposedHeaders: ["set-cookie"],  // pour pouvoir accéder au header Set-Cookie
-}));
+
 
 
 
