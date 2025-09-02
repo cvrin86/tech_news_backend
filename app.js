@@ -14,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
-  "http://localhost:3001", // ton front en prod
+  "https://tech-news-frontend-t127.vercel.app", // ton front en prod
   // tu peux en rajouter d'autres si besoin (previews, localhost...)
 ];
 
