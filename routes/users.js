@@ -11,51 +11,30 @@ const User = require("../models/users");
 const { checkBody } = require("../modules/checkBody");
 
 // route to create a new account
-router.post("/signup", (req, res) => {
+router.post("/signup", async (req, res) => {
   if (!checkBody(req.body, ["username", "password"])) {
-    res.json({ result: false, error: "Missing or empty fields !" });
-    return;
+    return res.status(400).json({ result: false, error: "Missing or empty fields !" });
   }
 
-  // check if a user already been registered
+  const existingUser = await User.findOne({ username: { $regex: new RegExp(req.body.username, "i") } });
+  if (existingUser) {
+    return res.status(409).json({ result: false, error: "User already exists !" });
+  }
 
-  User.findOne({
-    username: { $regex: new RegExp(req.body.username, "i") },
-  }).then((data) => {
-    if (data === null) {
-      const hash = bcrypt.hashSync(req.body.password, 10);
+  const hash = bcrypt.hashSync(req.body.password, 10);
+  const newUser = new User({ username: req.body.username, password: hash });
+  const savedUser = await newUser.save();
 
-      const newUser = new User({
-        username: req.body.username,
-        password: hash,
-      });
+  const token = jwt.sign({ id: savedUser.id }, JWT_SECRET, { expiresIn: "24h" });
 
-      newUser.save().then((data) => {
-        const token = jwt.sign(
-          {
-            id: data.id,
-          },
-          JWT_SECRET,
-          {
-            expiresIn: "24h",
-          }
-        );
-
-        res
-          .cookie("jwt", token, {
-             httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  maxAge: 24 * 60 * 60 * 1000,
-          })
-          .json({ result: true, data });
-      });
-    } else {
-      // User already exists in database
-      res.json({ result: false, error: "User already exists !" });
-    }
-  });
+  res.cookie("jwt", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 24 * 60 * 60 * 1000,
+  }).json({ result: true, data: savedUser });
 });
+
 
 // route to sign in
 router.post("/signin", (req, res) => {
