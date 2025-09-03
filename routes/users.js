@@ -10,44 +10,60 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const User = require("../models/users");
 const { checkBody } = require("../modules/checkBody");
 
-// route to create a new account
-router.post("/signup", async (req, res) => {
+
+// Create a user
+exports.createUser = async (req, res) => {
+  if (!checkBody(req.body, ["username", "password"])) {
+    return res.json({ result: false, error: "Missing or empty fields !" });
+  }
+
+  const { username, password } = req.body;
+
   try {
-    if (!checkBody(req.body, ["username", "password"])) {
-      return res.status(400).json({ result: false, error: "Missing or empty fields !" });
-    }
+    // Check if the user already exists
+    const existingUser = await User.findOne({
+      username: { $regex: new RegExp(username, "i") },
+    });
 
-    const existingUser = await User.findOne({ username: { $regex: new RegExp(req.body.username, "i") } });
     if (existingUser) {
-      return res.status(409).json({ result: false, error: "User already exists !" });
+      // User already exists
+      return res.json({ result: false, error: "User already exists !" });
     }
 
-    const hash = bcrypt.hashSync(req.body.password, 10);
-    const newUser = new User({ username: req.body.username, password: hash });
+    // Hash the password before saving
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create a new user
+    const newUser = new User({
+      username,
+      password: passwordHash,
+    });
+
+    // Save the user to the database
     const savedUser = await newUser.save();
 
-    if (!JWT_SECRET) {
-      console.error("JWT_SECRET is not defined !");
-      return res.status(500).json({ result: false, error: "Internal server error" });
-    }
+    // Generate a JWT token
+    const token = jwt.sign(
+      { id: savedUser._id }, // Use _id from the saved user object
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
 
-    const token = jwt.sign({ id: savedUser.id }, JWT_SECRET, { expiresIn: "24h" });
+    // Send the token in a cookie
+    res.cookie("jwt", token, {
+      httpOnly: true,
+      secure: true, // Use secure cookies in production
+      sameSite: "none",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
 
-  res.cookie("jwt", token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  maxAge: 24 * 60 * 60 * 1000,
-});
-
-
+    // Respond with the user data and success result
     return res.json({ result: true, data: savedUser });
   } catch (error) {
-    console.error("Signup error:", error);
-    return res.status(500).json({ result: false, error: "Internal server error" });
+    console.error(error);
+    return res.status(500).json({ result: false, error: "Server error" });
   }
-});
-
+};
 // route to sign in
 router.post("/signin", async (req, res) => {
   try {
