@@ -71,13 +71,17 @@ router.post("/signin", (req, res) => {
 });
 
 router.get("/canBookmark", auth, (req, res) => {
-  User.findOne({ _id: req.user.id }).then((data) => {
-    if (data) {
-      res.json({ result: true });
-    } else {
-      res.json({ result: false, error: "User not found !" });
-    }
-  });
+  User.findOne({ _id: req.user.id })
+    .then((data) => {
+      if (data) {
+        res.json({ result: true });
+      } else {
+        res.json({ result: false, error: "User not found !" });
+      }
+    })
+    .catch((err) => {
+      res.status(500).json({ result: false, error: err.message });
+    });
 });
 
 router.post("/logout", (_, res) => {
