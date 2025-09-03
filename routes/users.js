@@ -70,19 +70,21 @@ router.post("/signin", (req, res) => {
   });
 });
 
-router.get("/canBookmark", auth, (req, res) => {
-  User.findOne({ _id: req.user.id })
-    .then((data) => {
-      if (data) {
-        res.json({ result: true });
-      } else {
-        res.json({ result: false, error: "User not found !" });
-      }
-    })
-    .catch((err) => {
-      res.status(500).json({ result: false, error: err.message });
-    });
+router.get("/canBookmark", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found!" });
+    }
+
+    return res.json({ result: true });
+  } catch (err) {
+    console.error("Error in /canBookmark:", err);
+    return res.status(500).json({ result: false, error: "Internal server error" });
+  }
 });
+
 
 router.post("/logout", (_, res) => {
   res.clearCookie("jwt");
